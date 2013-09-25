@@ -66,6 +66,7 @@ class Router {
 
 	private function renderTemplate($path) {
 		if ($template = $this->getTemplate($path)) {
+			$View = $this->view;
 			include($this->templateRoot.$template);
 		} else {
 			$this->view->main();
