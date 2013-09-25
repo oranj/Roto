@@ -1,5 +1,6 @@
 <?php
 
+namespace Roto;
 
 class Router {
 

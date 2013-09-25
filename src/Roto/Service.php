@@ -1,5 +1,7 @@
 <?php
 
+namespace Roto;
+
 class Service {
 	
 	private static $lambdaRegistry = array();

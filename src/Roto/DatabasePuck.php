@@ -1,5 +1,7 @@
 <?php
 
+namespace Roto;
+
 class DatabasePuck {
 	private $database;
 	private $table;

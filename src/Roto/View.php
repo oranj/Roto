@@ -1,5 +1,7 @@
 <?php
 
+namespace Roto;
+
 class View {
 
 	const MAIN_SECTION = '_main';

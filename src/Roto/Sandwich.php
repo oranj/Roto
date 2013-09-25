@@ -1,5 +1,7 @@
 <?php
 
+namespace Roto;
+
 class Sandwich {
 
 	private $docRoot = null;

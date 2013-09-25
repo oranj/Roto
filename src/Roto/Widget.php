@@ -1,5 +1,7 @@
 <?php
 
+namespace Roto;
+
 class Widget {
 
 	public static $root = 'widgets/';

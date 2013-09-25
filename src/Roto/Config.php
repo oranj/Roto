@@ -1,5 +1,7 @@
 <?php
 
+namespace Roto;
+
 class Config {
 
 	private $data = null;
