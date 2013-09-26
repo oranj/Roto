@@ -1,0 +1,13 @@
+php_flag display_errors "1"
+php_flag short_open_tag "1"
+
+RewriteEngine On
+
+# if a file exists in public, go there
+RewriteCond %{DOCUMENT_ROOT}/public/%{REQUEST_URI} -f
+RewriteRule ^ public/%{REQUEST_URI} [L]
+
+RewriteCond %{REQUEST_URI} ^/public/
+RewriteRule ^(.*)$ - [S=1]
+
+RewriteRule ^(.*)$ index.php [L]

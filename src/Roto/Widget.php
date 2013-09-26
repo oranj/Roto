@@ -18,7 +18,7 @@ class Widget {
 
 	public function __construct($path, $input = array()) {
 		if (! file_exists(self::$root.$path)) {
-			throw new Exception("Widget does not exist at path $path");
+			throw new \Exception("Widget does not exist at path $path");
 		}
 		$this->path = $path;
 		$this->input = $input;

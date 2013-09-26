@@ -1,0 +1,8 @@
+#! /bin/bash
+
+mkdir config;
+mkdir layout;
+mkdir layout/templates;
+mkdir layout/widgets;
+mkdir public;
+mkdir www;
