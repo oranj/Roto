@@ -6,7 +6,7 @@ $root = dirname(dirname(__FILE__));
 
 Service::register('CFG', function() use ($root) {
 	return new Config(
-		$root.'/config/config.ini',
+		$root.'/config/config.ini'
 	);
 });
 
