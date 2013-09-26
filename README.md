@@ -1,5 +1,7 @@
 # Roto
 
+![Roto](http://oranj.io/uploads/roto/roto.png)
+
 ## Quickstart
 
 To quickly install Roto, run the following command:
