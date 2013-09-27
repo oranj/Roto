@@ -4,11 +4,12 @@ namespace Roto;
 
 class View {
 
-	const MAIN_SECTION = '_main';
+	const MAIN_REGION = '_main';
 
-	private $sections = array();
+	private $regions = array();
 	private static $instance = null;
-	private $currentRegion = self::MAIN_SECTION;
+	private $currentRegion = self::MAIN_REGION;
+	private $data;
 
 	public function __construct() {}
 
@@ -19,28 +20,31 @@ class View {
 		return self::$instance;
 	}
 
-	public function render($section = self::MAIN_SECTION) {
-		if (array_key_exists($section, $this->sections)) {
-
-			if (is_callable($this->sections[$section])) {
-				$this->sections[$section]();
-			} else {
-				echo $this->sections[$section];
-			}			
-		} else if (! $section == self::MAIN_SECTION) {
-			throw new Exception(
-				"Unable to render, section {$section} not defined"
+	public function render($section_name = self::MAIN_REGION) {
+		if (array_key_exists($section_name, $this->regions)) {
+			foreach ($this->regions[$section_name] as $section) { 
+				if (is_string($section)) {
+					echo $section;
+				} else if (gettype($section) == 'object' && get_class($section) == 'Roto\Widget') {
+					$section->render();
+				} else if (is_callable($section)) {
+					$section();
+				} 			
+			}
+		} else if ($section_name != self::MAIN_REGION) {
+			throw new \Exception(
+				"Unable to render, section {$section_name} not defined"
 			);
 		}
 	}
 
-	private function region($name) {
+	private function startRegion($name) {
 		$this->endregion();
 		$this->currentRegion = $name;
 	}
 
-	private function endregion() {
-		$this->section($this->currentRegion, trim(ob_get_clean()));
+	private function endRegion() {
+		$this->region($this->currentRegion, trim(ob_get_clean()));
 		ob_start();
 	}
 
@@ -49,23 +53,23 @@ class View {
 		include ($filename);
 		$viewHtml = ob_get_clean();
 
-		$this->section(self::MAIN_SECTION, trim($viewHtml));
+		$this->region(self::MAIN_REGION, trim($viewHtml));
 	}
 
-	public function section($name, $sectionData = null) {
-		if (! isset($this->sections[$name])) {
-			$this->sections[$name] = '';
+	public function region($name, $sectionData = null) {
+		if (! isset($this->regions[$name])) {
+			$this->regions[$name] = array();
 		}
-		$this->sections[$name] .= $sectionData;
+		$this->regions[$name] []= $sectionData;
 	}
 
 	public function __call($name, $args) {
 		if ($name == 'main') {
-			$name = self::MAIN_SECTION;
+			$name = self::MAIN_REGION;
 		}
 
 		if (count($args) > 0) {
-			$this->section($name, $args[0]);
+			$this->region($name, $args[0]);
 		} else {
 			$this->render($name);
 		}		
@@ -74,6 +78,18 @@ class View {
 	public static function __callStatic($method, $args) {
 		$inst = self::getInstance();
 		return call_user_func_array(array($inst, $method), $args);
+	}
+
+	public function __set($name, $value) {
+		$this->data[$name] = $value;
+	}
+
+	public function __isset($name) {
+		return isset($this->data[$name]);
+	}
+
+	public function __get($name) {
+		return $this->data[$name];
 	}
 
 }

@@ -7,6 +7,8 @@ class Router {
 	private $folderFile;
 	private $templateRoot;
 	private $webRoot;
+	private $definedController = null;
+	private $definedView = null;
 	private $template = null;
 	private $templateMatches = array();
 	private $view = null;
@@ -20,6 +22,14 @@ class Router {
 
 	public function template($template) {
 		$this->template = $template;
+	}
+
+	public function controller($controller) {
+		$this->definedController = $controller;
+	}
+
+	public function view($view) {
+		$this->definedView = $view;
 	}
 
 	public function matchTemplate($regex, $template) {
@@ -43,6 +53,18 @@ class Router {
 		return $folderFiles;
 	}
 
+	private function getController($path) {
+		$controllerPath = $this->webRoot;
+
+		if (isset($this->definedController)) {
+			$controllerPath .= $this->definedController;
+		} else {
+			$controllerPath .= preg_replace('/\.([a-z]+)$/', '.php', $path);
+		}
+
+		return $controllerPath;
+	}
+
 	private function getTemplate($path) {
 		if (! is_null($this->template)) {
 			return $this->template;
@@ -55,8 +77,18 @@ class Router {
 		return false;
 	}
 
+	private function getView($path) {
+		$viewPath = $this->webRoot;
+		if (isset($this->definedView)) {
+			$viewPath .= $this->definedView;
+		} else {
+			$viewPath .= $path.'.php';
+		}
+		return $viewPath;
+	}
+
 	private function renderView($path) {
-		$viewPath = $this->webRoot.$path.'.php';
+		$viewPath = $this->getView($path);
 		if (file_exists($viewPath)) {
 			$this->view->includeFile($viewPath);
 			return true;
@@ -75,7 +107,7 @@ class Router {
 
 	private function evaluateFolderFiles($path) {
 		$folderFiles = $this->getFolderFiles($path);
-	
+		$View = $this->view;
 		foreach ($folderFiles as $folderFile) {
 			if (file_exists($folderFile)) {
 				require($folderFile);
@@ -84,8 +116,9 @@ class Router {
 	}
 
 	private function evaluateController($path) {
-		$controllerPath = preg_replace('/\.([a-z]+)$/', '.php', $this->webRoot.$path);
+		$controllerPath = $this->getController($path);
 		if (file_exists($controllerPath)) {
+			$View = $this->view;
 			require($controllerPath);
 		}
 	}
