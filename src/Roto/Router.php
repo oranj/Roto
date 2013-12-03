@@ -9,133 +9,189 @@ class Router {
 	private $webRoot;
 	private $definedController = null;
 	private $definedView = null;
+	private $definedTemplate = null;
 	private $template = null;
 	private $templateMatches = array();
 	private $view = null;
 
-	public function __construct($view, $webRoot, $templateRoot, $folderFile = '_folder.php') {
+	private $routing_data = array();
+	private $routing_parameters = array();
+
+	private $mapping = array();
+
+	public function __construct($view, $webRoot, $templateRoot) {
 		$this->view = $view;
 		$this->webRoot = $webRoot;
 		$this->templateRoot = $templateRoot;
-		$this->folderFile = $folderFile;
-	}
-
-	public function template($template) {
-		$this->template = $template;
-	}
-
-	public function controller($controller) {
-		$this->definedController = $controller;
 	}
 
 	public function view($view) {
 		$this->definedView = $view;
 	}
 
-	public function matchTemplate($regex, $template) {
-		$this->templateMatches[$regex] = $template;
-	}
-
-	private function getFolderFiles($path) {
-		$folders = array_filter(explode('/', $path));
-		$folderPath = rtrim($this->webRoot.'/');
-		$folderFiles = array();
-
-		foreach ($folders as $folder) {
-			$folderPath .= '/'.$folder;
-			if (is_dir($folderPath)) {
-				array_unshift($folderFiles, $folderPath.'/'.$this->folderFile);
-			} else {
-				break;
-			}
-		}
-
-		return $folderFiles;
-	}
-
-	private function getController($path) {
-		$controllerPath = $this->webRoot;
-
-		if (isset($this->definedController)) {
-			$controllerPath .= $this->definedController;
-		} else {
-			$controllerPath .= preg_replace('/\.([a-z]+)$/', '.php', $path);
-		}
-
-		return $controllerPath;
-	}
-
-	private function getTemplate($path) {
-		if (! is_null($this->template)) {
-			return $this->template;
-		}
-		foreach ($this->templateMatches as $regex => $template) {
-			if (preg_match($regex, $path)) {
-				return $template;
-			}
-		}
-		return false;
-	}
-
-	private function getView($path) {
-		$viewPath = $this->webRoot;
-		if (isset($this->definedView)) {
-			$viewPath .= $this->definedView;
-		} else {
-			$viewPath .= $path.'.php';
-		}
-		return $viewPath;
-	}
 
 	private function renderView($path) {
-		$viewPath = $this->getView($path);
+		$viewPath = $this->webRoot . $path;
 		if (file_exists($viewPath)) {
-			$this->view->includeFile($viewPath);
+			echo $this->view->includeFile($viewPath);
 			return true;
 		}
 		return false;
 	}
 
-	private function renderTemplate($path) {
-		if ($template = $this->getTemplate($path)) {
-			$View = $this->view;
-			include($this->templateRoot.$template);
-		} else {
-			$this->view->main();
-		}
+	public function setTemplate($path) {
+		$this->definedTemplate = $path;
 	}
 
-	private function evaluateFolderFiles($path) {
-		$folderFiles = $this->getFolderFiles($path);
-		$View = $this->view;
-		foreach ($folderFiles as $folderFile) {
-			if (file_exists($folderFile)) {
-				require($folderFile);
-			}
+	private function renderTemplate($path) {
+		if ($this->definedTemplate) {
+			$path = $this->definedTemplate;
+		}
+		$fullPath = $this->templateRoot.$path;
+		if ($path && file_exists($fullPath) && ! is_dir($fullPath)) {
+			$View = $this->view;
+			include($fullPath);
+		} else {
+			echo $this->view->main();
 		}
 	}
 
 	private function evaluateController($path) {
-		$controllerPath = $this->getController($path);
+		if ($this->definedController) {
+			$path = $this->definedController;
+		}
+		$controllerPath = $this->webRoot . $path;
 		if (file_exists($controllerPath)) {
+			if (is_dir($controllerPath)) {
+				throw new \Exception("Invalid controller path $controllerPath");
+			}
 			$View = $this->view;
 			require($controllerPath);
 		}
 	}
 
-	public function route($requestUri) {
-		$pathInfo = parse_url($requestUri);
-		$path = $pathInfo['path'];
-		if ($path[strlen($path)-1] == '/') {
-			$path .= 'index.html';
-		}
-		$path = ltrim($path, '/');
-	
-		$this->evaluateFolderFiles($path);
-		$this->evaluateController($path);
+	public function map($regex, $data) {
+		$this->mapping []= array('match' => $regex, 'data' => $data);
+		return $this;
+	}
 
-		$this->renderView($path);
-		$this->renderTemplate($path);
-		
+	private function atSubstitute($string, $matches) {
+		while (strpos($string, '@') !== false) {
+			if (preg_match("/@(\{(.*?)\}|\b(.+?)\b)/", $string, $var_matches)) {
+
+				$search = $var_matches[0];
+
+				if ($var_matches[2]) {
+					$name = $var_matches[2];
+				} else if ($var_matches[3]) {
+					$name = $var_matches[3];
+				}
+
+				if (isset($matches[$name])) {
+					$replace = $matches[$name];
+				} else {
+					$replace = "{{$name}}";
+				}
+
+				$string = str_replace($search, $replace, $string);
+			} else {
+				break;
+			}
+		}
+		return $string;
+	}
+
+	public function parameters() {
+		return $this->routing_parameters;
+	}
+
+	public function param($name) {
+		if (isset($this->routing_parameters[$name])) {
+			return $this->routing_parameters[$name];
+		}
+		return null;
+	}
+
+	public function routingData() {
+		return $this->routing_data;
+	}
+
+	public function route($request) {
+
+		$urlinfo = parse_url($request);
+		$request = $urlinfo['path'];
+
+		$controller = null;
+		$view = null;
+		$template = null;
+		$this->routing_parameters = array();
+		$request_trace = array($request);
+
+		foreach ($this->mapping as $map) {
+			if (preg_match($map['match'], $request, $matches)) {
+				if (isset($map['data']['parameters'])) {
+					foreach ($map['data']['parameters'] as $key => $value) {
+						if (strlen($value) > 0 && $value[0] == '@') {
+							$name = substr($value, 1);
+							$value = $matches[$name];
+
+							if (is_numeric($key)) {
+								$this->routing_parameters[$name] = $matches[$name];
+							} else {
+								$this->routing_parameters[$key]  = $matches[$name];
+							}
+						}
+
+					}
+				}
+				foreach ($map['data'] as $type => $value) {
+					switch ($type) {
+						case 'request':
+							if (is_callable($value)) {
+								$request = call_user_func($value, $matches);
+							} else if (is_string($value)) {
+								$request = $this->atSubstitute($value, $matches);
+							}
+							$request_trace []= $request;
+							break;
+						case 'controller':
+							if (is_callable($value)) {
+								$controller = call_user_func($value, $matches);
+							} else if (is_string($value)) {
+								$controller = $this->atSubstitute($value, $matches);
+							}
+							break;
+						case 'template':
+							if (is_callable($value)) {
+								$template = call_user_func($value, $matches);
+							} else if (is_string($value)) {
+								$template = $this->atSubstitute($value, $matches);
+							}
+							break;
+						case 'view':
+							if (is_callable($value)) {
+								$view = call_user_func($value, $matches);
+							} else if (is_string($value)) {
+								$view = $this->atSubstitute($value, $matches);
+							}
+							break;
+					}
+				}
+			}
+		}
+
+		$this->routing_data = array(
+			'controller' => $controller,
+			'view' => $view,
+			'template' => $template,
+			'request' => $request_trace,
+			'parameters' => $this->routing_parameters
+		);
+
+
+		$this->evaluateController($controller);
+		$this->renderView($view);
+		$this->renderTemplate($template);
+
 	}
 }

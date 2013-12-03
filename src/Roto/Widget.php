@@ -28,10 +28,13 @@ class Widget {
 		foreach ($this->input as $key => $value) {
 			$this->{$key} = $value;
 		}
+		ob_start();
 		include(self::$root.$this->path);
+		$out = ob_get_clean();
 		foreach ($this->input as $key => $value) {
 			unset($this->{$key});
 		}
+		return $out;
 	}
 
 }

@@ -13,28 +13,21 @@ class View {
 
 	public function __construct() {}
 
-	private static function getInstance() {
-		if (is_null(self::$instance)) {
-			self::$instance = new View();
-		}
-		return self::$instance;
-	}
-
 	public function render($section_name = self::MAIN_REGION) {
 		if (array_key_exists($section_name, $this->regions)) {
-			foreach ($this->regions[$section_name] as $section) { 
+			$out = '';
+			foreach ($this->regions[$section_name] as $section) {
 				if (is_string($section)) {
-					echo $section;
+					$out .= $section;
 				} else if (gettype($section) == 'object' && get_class($section) == 'Roto\Widget') {
-					$section->render();
+					$out .= $section->render();
 				} else if (is_callable($section)) {
-					$section();
-				} 			
+					$out .= $section();
+				}
 			}
+			return $out;
 		} else if ($section_name != self::MAIN_REGION) {
-			throw new \Exception(
-				"Unable to render, section {$section_name} not defined"
-			);
+			return "<!-- [[$section_name]] -->";
 		}
 	}
 
@@ -71,13 +64,8 @@ class View {
 		if (count($args) > 0) {
 			$this->region($name, $args[0]);
 		} else {
-			$this->render($name);
-		}		
-	}
-
-	public static function __callStatic($method, $args) {
-		$inst = self::getInstance();
-		return call_user_func_array(array($inst, $method), $args);
+			return $this->render($name);
+		}
 	}
 
 	public function __set($name, $value) {
