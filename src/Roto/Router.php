@@ -31,6 +31,9 @@ class Router {
 
 
 	private function renderView($path) {
+		if ($this->definedView) {
+			$path = $this->definedView;
+		}
 		$viewPath = $this->webRoot . $path;
 		if (file_exists($viewPath)) {
 			echo $this->view->includeFile($viewPath);
@@ -39,12 +42,12 @@ class Router {
 		return false;
 	}
 
-	public function setTemplate($path) {
+	public function template($path) {
 		$this->definedTemplate = $path;
 	}
 
 	private function renderTemplate($path) {
-		if ($this->definedTemplate) {
+		if (! is_null($this->definedTemplate)) {
 			$path = $this->definedTemplate;
 		}
 		$fullPath = $this->templateRoot.$path;
@@ -75,7 +78,7 @@ class Router {
 		return $this;
 	}
 
-	private function atSubstitute($string, $matches) {
+	private function atSubstitute($string, $matches, $default_template = '{{%s}}') {
 		while (strpos($string, '@') !== false) {
 			if (preg_match("/@(\{(.*?)\}|\b(.+?)\b)/", $string, $var_matches)) {
 
@@ -90,7 +93,7 @@ class Router {
 				if (isset($matches[$name])) {
 					$replace = $matches[$name];
 				} else {
-					$replace = "{{$name}}";
+					$replace = sprintf($default_template, $name);
 				}
 
 				$string = str_replace($search, $replace, $string);
@@ -131,17 +134,11 @@ class Router {
 			if (preg_match($map['match'], $request, $matches)) {
 				if (isset($map['data']['parameters'])) {
 					foreach ($map['data']['parameters'] as $key => $value) {
-						if (strlen($value) > 0 && $value[0] == '@') {
-							$name = substr($value, 1);
-							$value = $matches[$name];
-
-							if (is_numeric($key)) {
-								$this->routing_parameters[$name] = $matches[$name];
-							} else {
-								$this->routing_parameters[$key]  = $matches[$name];
-							}
+						if (is_callable($value)) {
+							$this->routing_parameters[$key] = call_user_func($value, $matches);
+						} else {
+							$this->routing_parameters[$key] = $this->atSubstitute($value, $matches, '');
 						}
-
 					}
 				}
 				foreach ($map['data'] as $type => $value) {
