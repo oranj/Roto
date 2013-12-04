@@ -129,6 +129,7 @@ class Router {
 		$template = null;
 		$this->routing_parameters = array();
 		$request_trace = array($request);
+		$is_final = false;
 
 		foreach ($this->mapping as $map) {
 			if (preg_match($map['match'], $request, $matches)) {
@@ -143,6 +144,9 @@ class Router {
 				}
 				foreach ($map['data'] as $type => $value) {
 					switch ($type) {
+						case 'final':
+							$is_final = true;
+							break;
 						case 'request':
 							if (is_callable($value)) {
 								$request = call_user_func($value, $matches);
@@ -173,6 +177,9 @@ class Router {
 							}
 							break;
 					}
+				}
+				if ($is_final) {
+					break;
 				}
 			}
 		}
