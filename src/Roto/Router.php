@@ -7,13 +7,11 @@ class Router {
 	private $folderFile;
 	private $templateRoot;
 	private $webRoot;
-	private $definedController = null;
-	private $definedView = null;
-	private $definedTemplate = null;
 	private $template = null;
-	private $templateMatches = array();
+
 	private $view = null;
 
+	private $traces = array();
 	private $routing_data = array();
 	private $routing_parameters = array();
 
@@ -26,15 +24,26 @@ class Router {
 	}
 
 	public function view($view) {
-		$this->definedView = $view;
+		$this->traces []= array('view' => $view);
+	}
+
+	public function template($path) {
+		$this->traces []= array('template' => $path);
+	}
+
+	private function findInTrace($key) {
+		$value = null;
+		foreach ($this->traces as $route) {
+			if (isset($route[$key])) {
+				$value = $route[$key];
+			}
+		}
+		return $value;
 	}
 
 
-	private function renderView($path) {
-		if ($this->definedView) {
-			$path = $this->definedView;
-		}
-		$viewPath = $this->webRoot . $path;
+	private function renderView() {
+		$viewPath = $this->webRoot . $this->findInTrace('view');
 		if (file_exists($viewPath)) {
 			echo $this->view->includeFile($viewPath);
 			return true;
@@ -42,16 +51,10 @@ class Router {
 		return false;
 	}
 
-	public function template($path) {
-		$this->definedTemplate = $path;
-	}
 
-	private function renderTemplate($path) {
-		if (! is_null($this->definedTemplate)) {
-			$path = $this->definedTemplate;
-		}
-		$fullPath = $this->templateRoot.$path;
-		if ($path && file_exists($fullPath) && ! is_dir($fullPath)) {
+	private function renderTemplate() {
+		$fullPath = $this->templateRoot.$this->findInTrace('template');
+		if (file_exists($fullPath) && ! is_dir($fullPath)) {
 			$View = $this->view;
 			include($fullPath);
 		} else {
@@ -59,11 +62,8 @@ class Router {
 		}
 	}
 
-	private function evaluateController($path) {
-		if ($this->definedController) {
-			$path = $this->definedController;
-		}
-		$controllerPath = $this->webRoot . $path;
+	private function evaluateController() {
+		$controllerPath = $this->webRoot . $this->findInTrace('controller');
 		if (file_exists($controllerPath)) {
 			if (is_dir($controllerPath)) {
 				throw new \Exception("Invalid controller path $controllerPath");
@@ -105,18 +105,27 @@ class Router {
 	}
 
 	public function parameters() {
-		return $this->routing_parameters;
+		$out = array();
+		foreach($this->traces as $route) {
+			if (isset($route['params'])) {
+				foreach ($route['params'] as $name => $value) {
+					$out[$name] = $value;
+				}
+			}
+		}
+		return $out;
 	}
 
 	public function param($name) {
-		if (isset($this->routing_parameters[$name])) {
-			return $this->routing_parameters[$name];
+		$params = $this->parameters();
+		if (isset($params[$name])) {
+			return $params[$name];
 		}
 		return null;
 	}
 
 	public function routingData() {
-		return $this->routing_data;
+		return $this->traces;
 	}
 
 	public function route($request) {
@@ -132,16 +141,20 @@ class Router {
 		$is_final = false;
 
 		foreach ($this->mapping as $map) {
+			$route = array();
+
 			if (preg_match($map['match'], $request, $matches)) {
 				if (isset($map['data']['parameters'])) {
+					$route['params'] = array();
 					foreach ($map['data']['parameters'] as $key => $value) {
 						if (is_callable($value)) {
-							$this->routing_parameters[$key] = call_user_func($value, $matches);
+							$route['params'][$key] = call_user_func($value, $matches);
 						} else {
-							$this->routing_parameters[$key] = $this->atSubstitute($value, $matches, '');
+							$route['params'][$key] = $this->atSubstitute($value, $matches, '');
 						}
 					}
 				}
+				$route['match'] = $map['match'];
 				foreach ($map['data'] as $type => $value) {
 					switch ($type) {
 						case 'final':
@@ -149,53 +162,45 @@ class Router {
 							break;
 						case 'request':
 							if (is_callable($value)) {
-								$request = call_user_func($value, $matches);
+								$route['request'] = call_user_func($value, $matches);
 							} else if (is_string($value)) {
-								$request = $this->atSubstitute($value, $matches);
+								$route['request'] = $this->atSubstitute($value, $matches);
 							}
-							$request_trace []= $request;
+							$request = $route['request'];
 							break;
 						case 'controller':
 							if (is_callable($value)) {
-								$controller = call_user_func($value, $matches);
+								$route['controller'] = call_user_func($value, $matches);
 							} else if (is_string($value)) {
-								$controller = $this->atSubstitute($value, $matches);
+								$route['controller'] = $this->atSubstitute($value, $matches);
 							}
 							break;
 						case 'template':
 							if (is_callable($value)) {
-								$template = call_user_func($value, $matches);
+								$route['template'] = call_user_func($value, $matches);
 							} else if (is_string($value)) {
-								$template = $this->atSubstitute($value, $matches);
+								$route['template'] = $this->atSubstitute($value, $matches);
 							}
 							break;
 						case 'view':
 							if (is_callable($value)) {
-								$view = call_user_func($value, $matches);
+								$route['view'] = call_user_func($value, $matches);
 							} else if (is_string($value)) {
-								$view = $this->atSubstitute($value, $matches);
+								$route['view'] = $this->atSubstitute($value, $matches);
 							}
 							break;
 					}
 				}
+				$this->traces []= $route;
 				if ($is_final) {
 					break;
 				}
 			}
 		}
 
-		$this->routing_data = array(
-			'controller' => $controller,
-			'view' => $view,
-			'template' => $template,
-			'request' => $request_trace,
-			'parameters' => $this->routing_parameters
-		);
-
-
-		$this->evaluateController($controller);
-		$this->renderView($view);
-		$this->renderTemplate($template);
+		$this->evaluateController();
+		$this->renderView();
+		$this->renderTemplate();
 
 	}
 }
