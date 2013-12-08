@@ -137,8 +137,11 @@ class Router {
 		$view = null;
 		$template = null;
 		$this->routing_parameters = array();
-		$request_trace = array($request);
 		$is_final = false;
+
+		$this->traces []= array(
+			'request' => $request
+		);
 
 		foreach ($this->mapping as $map) {
 			$route = array();
