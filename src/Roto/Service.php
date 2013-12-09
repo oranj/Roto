@@ -3,7 +3,7 @@
 namespace Roto;
 
 class Service {
-	
+
 	private static $lambdaRegistry = array();
 	private static  $cache = array();
 
@@ -21,7 +21,7 @@ class Service {
 
 	public static function get($key) {
 		if (! self::isRegistered($key)) {
-			throw new Exception("Service `$key' not registered");
+			throw new \Exception("Service `$key' not registered");
 		}
 		if (! self::isCached($key)) {
 			$lambda = self::$lambdaRegistry[$key];
@@ -36,5 +36,5 @@ class Service {
 			throw new Exception("Service `$key' is already registered");
 		}
 		self::$lambdaRegistry[$key] = $lambda;
-	} 
+	}
 }
