@@ -1,5 +1,7 @@
 <?php
 
+namespace Roto;
+
 class Database {
 
 	private $handle = null;
@@ -24,7 +26,7 @@ class Database {
 			$this->handle = mysql_connect($this->hostname, $this->username, $this->password);
 
 			if (! $this->handle) {
-				throw new Exception("Could not connect: ".mysql_error()." (".mysql_errno().")");
+				throw new \Exception("Could not connect: ".mysql_error()." (".mysql_errno().")");
 			}
 
 			mysql_select_db($this->database, $this->handle);
@@ -43,7 +45,7 @@ class Database {
 		$results = $this->getResultObj(func_get_args());
 		return mysql_fetch_assoc($results);
 
-	} 
+	}
 
 	public function rows() {
 		$out = array();
@@ -120,7 +122,7 @@ class Database {
 	#	drop($sql);
 		$this->query($sql);
 
-		return mysql_insert_id($this->connection());		
+		return mysql_insert_id($this->connection());
 	}
 
 	public function replace($table, $data) {
@@ -144,7 +146,7 @@ class Database {
 			$sets []= $set;
 		}
 		$sql = "UPDATE `$table` SET ".join(', ',$sets);
-		if (count($match) > 0) {	
+		if (count($match) > 0) {
 			$sql .= ' WHERE '.$this->buildMatchString($match);
 		}
 
@@ -177,7 +179,7 @@ class Database {
 
 	private function errorCheck() {
 		if (mysql_error()) {
-			throw new Exception("MYSQL Error: ".mysql_error()." (".mysql_errno().")");
+			throw new \Exception("MYSQL Error: ".mysql_error()." (".mysql_errno().")");
 		}
 	}
 
