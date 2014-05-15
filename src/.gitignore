@@ -1,0 +1,16 @@
+*.sublime-project
+*.sublime-workspace
+*.komodoproject
+*.esproj
+.komodotools/*
+.project
+.settings
+.buildpath
+.idea/
+node_modules/
+gource_grav.pl
+
+
+Thumbs.db
+.DS_Store
+._*
