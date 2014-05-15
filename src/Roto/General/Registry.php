@@ -7,7 +7,7 @@ class Registry {
 	private $data = array();
 
 	protected function isRegistered($key) {
-		return isset($this->data[$key]);
+		return array_key_exists($key, $this->data);
 	}
 
 	public function get($key) {
