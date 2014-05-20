@@ -1,18 +1,22 @@
 <?php
 
-namespace Roto\General;
+namespace Roto\DataStore;
 
 class ServiceRegistry extends Registry {
 
 	private $services = array();
 	private $factories = array();
 
-	protected function isRegistered($key) {
-		return parent::isRegistered($key) || isset($this->services[$key]);
+	public function __construct() {
+		parent::__construct();
+	}
+
+	protected function exists($key) {
+		return parent::exists($key) || isset($this->services[$key]);
 	}
 
 	public function service($key, $lambda) {
-		if ($this->isRegistered($key)) {
+		if ($this->exists($key)) {
 			throw new \Exception("Service for `$key; is already set");
 		}
 		$this->services[$key] = $lambda;
@@ -35,7 +39,7 @@ class ServiceRegistry extends Registry {
 	}
 
 	public function set($key, $value) {
-		if ($this->isRegistered($key)) {
+		if ($this->exists($key)) {
 			throw new \Exception("Value for `$key; is already set");
 		}
 		parent::set($key, $value);

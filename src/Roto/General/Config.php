@@ -1,6 +1,6 @@
 <?php
 
-namespace Roto;
+namespace Roto\General;
 
 class Config {
 

@@ -2,7 +2,7 @@
 
 namespace Roto\View;
 
-class View extends \Roto\General\Registry {
+class View extends \Roto\DataStore\Registry {
 
 	private $path;
 
@@ -13,10 +13,6 @@ class View extends \Roto\General\Registry {
 		$this->path = $path;
 	}
 
-	public function __invoke() {
-		return $this->render();
-	}
-
 	public function __get($key) {
 		if (! $this->isRegistered($key)) {
 			return "{{ $key }}";
@@ -24,9 +20,11 @@ class View extends \Roto\General\Registry {
 		return $this->get($key);
 	}
 
-	public function render() {
+	public function render($data) {
 		ob_start();
-		include($this->path);
+		call_user_func(function() use ($data, $path) {
+			include($path);
+		});
 		$out = ob_get_clean();
 		return $out;
 	}

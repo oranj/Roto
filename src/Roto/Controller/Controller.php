@@ -10,13 +10,15 @@ abstract class Controller {
 		$this->di = $di;
 	}
 
-	public function request($action = 'index') {
+	public function request($action = 'index', $args = array()) {
 		$methodName = strtolower($action).'Action';
 		if (method_exists($this, $methodName)) {
-			$output = call_user_func(array($this, $methodName));
-			if (! is_callable($output)) {
-				throw new \Exception("Result of action $action must return a callable method");
+
+			$output = call_user_func_array(array($this, $methodName), $args);
+			if (! is_array($output)) {
+				throw new \Exception("Result of action $action must return an array");
 			}
+
 			return $output;
 		} else {
 			throw new \Exception("No action defined");

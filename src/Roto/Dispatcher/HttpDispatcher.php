@@ -17,7 +17,7 @@ class HttpDispatcher extends Dispatcher {
 
 	public function setLayout($layout) {
 		if (is_string($layout)) {
-			$this->layout = new View($this->layoutRoot.$layout, array());
+			$this->layout = $this->di->make('layout', $layout);
 		} else if ($layout instanceof View) {
 			$this->layout = $layout;
 		} else {
@@ -35,12 +35,18 @@ class HttpDispatcher extends Dispatcher {
 		}
 	}
 
+	public function redirect($url) {
+		header('Location: '.$url);
+		exit;
+	}
+
 	public function getLayout() {
 		return $this->layout;
 	}
 
 	public function execute() {
-		$view = $this->controller->request($this->action);
+		$view = $this->getView();
+
 		if (! ($view instanceof View)) {
 			throw new \Exception("Action must return widget");
 		}
@@ -48,13 +54,14 @@ class HttpDispatcher extends Dispatcher {
 			if (! ($this->layout instanceof View)) {
 				throw new \Exception("Layout must be a widget");
 			}
+
 			$this->layout->view = $view;
 			$out = $this->layout->render();
 		} else {
 			$out = $view->render();
 		}
 		$this->sendHeaders();
-		print($out);
+		print ($out);
 	}
 
 }

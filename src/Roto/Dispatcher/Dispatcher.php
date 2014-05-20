@@ -6,6 +6,7 @@ class Dispatcher {
 
 	protected $controller;
 	protected $action = 'index';
+	protected $actionArgs = array();
 	protected $di;
 
 	public function __construct($di) {
@@ -29,13 +30,21 @@ class Dispatcher {
 		}
 	}
 
-	public function setAction($action) {
+	public function setAction($action, $args) {
 		$this->action = $action;
+		$this->actionArgs = $args;
+	}
+
+	public function getView() {
+		if (! ($this->controller instanceof \Roto\Controller\Controller)) {
+			throw new \Exception("No controller defined yet");
+		}
+		return $this->controller->request($this->action, $this->actionArgs);
 	}
 
 	public function execute() {
-		$out = $this->controller->request($this->action);
-		return $out();
+		$view = $this->getView();
+		print($view->render());
 	}
 
 }

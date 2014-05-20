@@ -1,17 +1,15 @@
 <?php
 
-namespace Roto\General;
+namespace Roto\DataStore;
 
-class Registry {
+class Registry extends BaseDataStore {
 
-	private $data = array();
-
-	protected function isRegistered($key) {
+	protected function exists($key) {
 		return array_key_exists($key, $this->data);
 	}
 
 	public function get($key) {
-		if (! $this->isRegistered($key)) {
+		if (! $this->exists($key)) {
 			throw new \Exception("No value for `$key'");
 		}
 
